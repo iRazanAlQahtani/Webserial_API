@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="us">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <script type="text/javascript" src="autoUpdate.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="app.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center mt-5">
+            Control Ardunio Using Speech
+        </h1>
+
+        <div class="form-group">
+            <textarea id="output-text" rows="4" class="form-control"> </textarea>
+        </div>
+        <div class="form-group">
+            <button id="start-btn"> Start Recording </button>
+            <button id="stop-btn" class="btn btn-danger btn-block"> Stop </button>
+        </div>
+
+        <br>
+
+        <div class="language">
+            <h6>Select Speech Language:</h6>
+            <input id="eng" type="radio" name="lang" value="English" checked>
+            <label for="lang">English</label>
+            <br>
+            <input id="arb" type="radio" name="lang" value="Arabic">
+            <label for="lang">Arabic</label>
+        </div>
+
+        <p id="action">"Press start to start listening"</p>
+
+        <footer>
+            <p class="disclaim"></p>
+
+            <p class="copyright">
+                © Copyright 2022 - Written By Anasmb
+            </p>
+
+        </footer>
+
+
+    </div>
+</body>
+
+<script>
+
+    var speechRecognition = window.speechRecognition || window.webkitSpeechRecognition;
+    var recognition = new speechRecognition();
+    recognition.lang = "ar-sa"
+    var textbox = document.getElementById("output-text");
+    var startBtn = document.getElementById("start-btn");
+    var stopBtn = document.getElementById("stop-btn");
+    var action = document.getElementById("action");
+    var content = "";
+    var port;
+
+    startBtn.addEventListener("click", async function () {
+
+        if (document.getElementById('arb').checked) {
+            recognition.lang = "ar-sa";
+            document.getElementById("output-text").style.direction = "rtl";
+        } else if (document.getElementById('eng').checked) {
+            recognition.lang = "en-US";
+            document.getElementById("output-text").style.direction = "ltr";
+        }
+        console.log(recognition.lang);
+
+        port = await navigator.serial.requestPort({});
+        await port.open({ baudRate: 9600 });
+
+        textbox.textContent = " ";
+        action.textContent = "We are listening :)";
+        recognition.start();
+
+    });
+
+    stopBtn.addEventListener("click", async function () {
+        action.textContent = "We are NOT listening";
+
+    });
+
+    recognition.onspeechend = function () {
+        action.textContent = "We are NOT listening";
+        recognition.stop();
+    }
+
+    recognition.onresult = function (event) {
+        var result = event.results[0][0].transcript;
+        textbox.textContent = result;
+        commandAnalayzer(textbox.textContent);
+    }
+
+
+    async function commandAnalayzer(text) {
+
+        const textEncoder = new TextEncoderStream();
+        const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+        const writer = textEncoder.writable.getWriter();
+
+
+        console.log(text);
+
+        if (text.includes("يمين") || text.includes("right")) {
+            await writer.write("right");
+        }
+        else if (text.includes("يسار") || text.includes("left")) {
+            await writer.write("left");
+        }
+
+        writer.releaseLock();
+
+        //await port.close();
+    }
+
+</script>
+
+</html>
